@@ -22,11 +22,11 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	github_token, ok := request.Headers["GitHub-Token"]
+	github_token, ok := request.Headers["Authorization"]
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusUnauthorized,
-			Body:       "`GitHub-Token` header missing.",
+			Body:       "`Authorization` header missing.",
 		}, nil
 	}
 
