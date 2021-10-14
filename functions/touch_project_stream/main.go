@@ -131,7 +131,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	query.Set("authorization_errors_fatal", "true")
 	query.Set("announce", "true")
-	query.Set("is_web_public", "true")
+	// query.Set("is_web_public", "true") // Not enabled for the free organisations available by default.
 	query.Set("history_public_to_subscribers", "true")
 	query.Set("stream_post_policy", "1")                 // Any user can post.
 	query.Set("message_retention_days", "\"realm_default\"") // Any user can post.
