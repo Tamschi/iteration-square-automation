@@ -134,10 +134,10 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	query.Set("is_web_public", "true")
 	query.Set("history_public_to_subscribers", "true")
 	query.Set("stream_post_policy", "1")                 // Any user can post.
-	query.Set("message_retention_days", "realm_default") // Any user can post.
+	query.Set("message_retention_days", "\"realm_default\"") // Any user can post.
 
 	zulipUrl.RawQuery = query.Encode()
-	zulipRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, zulipApiUrl, nil)
+	zulipRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, zulipUrl.String(), nil)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
