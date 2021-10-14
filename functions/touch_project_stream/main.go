@@ -145,6 +145,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
+	zulipRequest.Header.Add("Referer", "touch_project_stream")
+
 	client := &http.Client{}
 	response, err := client.Do(zulipRequest)
 	if err != nil {
@@ -164,7 +166,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	return &events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(responseBody), // What. No validation?
+		Body:       "Response from Zulip:\n\n" + string(responseBody), // What. No validation?
 	}, nil
 }
 
