@@ -15,6 +15,13 @@ import (
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 
+	if request.HTTPMethod != http.MethodPost {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusMethodNotAllowed,
+			Body:       "Must `POST`.",
+		}, nil
+	}
+
 	github_token, ok := request.Headers["Authorization"]
 	if !ok {
 		return &events.APIGatewayProxyResponse{
@@ -37,7 +44,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	_ = repository
 
-	return nil, errors.New("Not implemented")
+	return nil, errors.New("Not implemented.")
 }
 
 func main() {
