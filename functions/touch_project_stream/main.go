@@ -26,6 +26,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusUnauthorized,
+			Body:       "`GitHub-Token` header missing.",
 		}, nil
 	}
 
