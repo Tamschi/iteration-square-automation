@@ -96,7 +96,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	// Touch stream:
 	zulipUrl.Path = "api/v1/users/me/subscriptions"
 
-	zulipUrl.User = url.UserPassword(zulipEmail, zulipApiUrl)
+	zulipUrl.User = url.UserPassword(zulipEmail, zulipApiKey)
 
 	query, err := url.ParseQuery(zulipUrl.RawQuery)
 	if err != nil {
