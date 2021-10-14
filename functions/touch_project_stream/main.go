@@ -31,6 +31,12 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	}
 
 	repository_name := request.Body
+	if request.Body == "" {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body:       "Empty request body/repository name.",
+		}, nil
+	}
 
 	github_ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: github_token},
@@ -38,9 +44,12 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	github_tc := oauth2.NewClient(ctx, github_ts)
 
 	github_client := github.NewClient(github_tc)
-	repository, _, err := github_client.Repositories.Get(ctx, "Tamschi", repository_name)
+	repository, res, err := github_client.Repositories.Get(ctx, "Tamschi", repository_name)
 	if err != nil {
-		return nil, err
+		return &events.APIGatewayProxyResponse{
+			StatusCode: res.StatusCode,
+			Body:       err.Error(),
+		}, nil
 	}
 
 	_ = repository
