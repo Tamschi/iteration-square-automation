@@ -166,7 +166,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	return &events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       "Response from Zulip:\n\n" + string(responseBody), // What. No validation?
+		Body:       "Request URL:\n" + zulipUrl.Redacted() + "\n\nResponse from Zulip:\n\n" + string(responseBody), // What. No validation?
 	}, nil
 }
 
