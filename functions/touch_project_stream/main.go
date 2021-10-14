@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -14,6 +15,8 @@ import (
 )
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+
+	// Request validation:
 
 	if request.HTTPMethod != http.MethodPost {
 		return &events.APIGatewayProxyResponse{
@@ -38,16 +41,55 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	github_ts := oauth2.StaticTokenSource(
+	//  Zulip config validation:
+
+	zulipAPIKey, ok := os.LookupEnv("ZULIP_API_KEY")
+	if !ok {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "`ZULIP_API_KEY` not set.",
+		}, nil
+	}
+
+	zulipAPIURL, ok := os.LookupEnv("ZULIP_API_URL")
+	if !ok {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "`ZULIP_API_URL` not set.",
+		}, nil
+	}
+
+	zulipEmail, ok := os.LookupEnv("ZULIP_EMAIL")
+	if !ok {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "`ZULIP_EMAIL` not set.",
+		}, nil
+	}
+
+	_, _, _ = zulipAPIKey, zulipAPIURL, zulipEmail
+
+	// Repository validation:
+
+	githubTs := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: github_token},
 	)
-	github_tc := oauth2.NewClient(ctx, github_ts)
+	githubTc := oauth2.NewClient(ctx, githubTs)
 
-	github_client := github.NewClient(github_tc)
-	repository, res, err := github_client.Repositories.Get(ctx, "Tamschi", repository_name)
+	githubClient := github.NewClient(githubTc)
+	repository, res, err := githubClient.Repositories.Get(ctx, "Tamschi", repository_name)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: res.StatusCode,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	// Touch stream:
+
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
 			Body:       err.Error(),
 		}, nil
 	}
