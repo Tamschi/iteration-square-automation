@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -43,7 +45,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	//  Zulip config validation:
 
-	zulipAPIKey, ok := os.LookupEnv("ZULIP_API_KEY")
+	zulipApiKey, ok := os.LookupEnv("ZULIP_API_KEY")
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
@@ -51,11 +53,19 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	zulipAPIURL, ok := os.LookupEnv("ZULIP_API_URL")
+	zulipApiUrl, ok := os.LookupEnv("ZULIP_API_URL")
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
 			Body:       "`ZULIP_API_URL` not set.",
+		}, nil
+	}
+
+	zulipUrl, err := url.Parse(zulipApiUrl)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
 		}, nil
 	}
 
@@ -66,8 +76,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 			Body:       "`ZULIP_EMAIL` not set.",
 		}, nil
 	}
-
-	_, _, _ = zulipAPIKey, zulipAPIURL, zulipEmail
 
 	// Repository validation:
 
@@ -86,7 +94,50 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	}
 
 	// Touch stream:
+	zulipUrl.Path = "api/v1/users/me/subscriptions"
 
+	zulipUrl.User = url.UserPassword(zulipEmail, zulipApiUrl)
+
+	query, err := url.ParseQuery(zulipUrl.RawQuery)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: res.StatusCode,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	type subscription struct {
+		name        string
+		description string
+	}
+	subscriptions, err := json.Marshal([]subscription{{"project/" + *repository.Name, *repository.Description}})
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+	query.Set("subscriptions", string(subscriptions))
+
+	// user450752@iter-square.zulipchat.com // Tamme's Zulip mail. Ideally the bot would grab the list from the "core team" channel, though.
+	principals, err := json.Marshal([]int{450752})
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+	query.Set("principals", string(principals))
+
+	query.Set("authorization_errors_fatal", "true")
+	query.Set("announce", "true")
+	query.Set("is_web_public", "true")
+	query.Set("history_public_to_subscribers", "true")
+	query.Set("stream_post_policy", "1")                 // Any user can post.
+	query.Set("message_retention_days", "realm_default") // Any user can post.
+
+	zulipUrl.RawQuery = query.Encode()
+	zulipRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, zulipApiUrl, nil)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
@@ -94,9 +145,27 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	_ = repository
+	client := &http.Client{}
+	response, err := client.Do(zulipRequest)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
 
-	return nil, errors.New("Not implemented.")
+	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	return &events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(responseBody), // What. No validation?
+	}, nil
 }
 
 func main() {
