@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"fmt"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -26,7 +27,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusUnauthorized,
-			Body:       "`Authorization` header missing.",
+			Body:       "`Authorization` header missing.\n\nrequest: " + fmt.Sprint(request),
 		}, nil
 	}
 
