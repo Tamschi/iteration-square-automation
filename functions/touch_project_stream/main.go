@@ -107,8 +107,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	}
 
 	type subscription struct {
-		name        string
-		description string
+		Name        string `json:"name"`
+		Description string `json:"description"`
 	}
 	subscriptions, err := json.Marshal([]subscription{{"project/" + *repository.Name, *repository.Description}})
 	if err != nil {
@@ -144,6 +144,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 			Body:       err.Error(),
 		}, nil
 	}
+
+	// zulipRequest.Header.Add("Referer", "https://"+zulipUrl.Host+"/")
 
 	client := &http.Client{}
 	response, err := client.Do(zulipRequest)
