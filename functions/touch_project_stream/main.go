@@ -145,8 +145,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	// zulipRequest.Header.Add("Referer", "https://"+zulipUrl.Host+"/")
-
 	client := &http.Client{}
 	response, err := client.Do(zulipRequest)
 	if err != nil {
