@@ -188,7 +188,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		SchemaVersion: 1,
 		Label:         "chat",
 		Message:       fmt.Sprint(len(streamSubscribersResponse.Subscribers)) + " in stream",
-		Color:         "g", // Somehow this is a nicer shade than `"green"`.
+		Color:         "blue",
 		NamedLogo:     "zulip",
 	})
 	if err != nil {
