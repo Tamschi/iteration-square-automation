@@ -17,6 +17,13 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	// Request validation:
 
+	if request.HTTPMethod != http.MethodGet {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusMethodNotAllowed,
+			Body:       "Must `GET`.",
+		}, nil
+	}
+
 	streamName, ok := request.QueryStringParameters["stream"]
 	if !ok || streamName == "" {
 		return &events.APIGatewayProxyResponse{
