@@ -46,7 +46,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	//  Zulip config validation:
 
-	zulipApiKey, ok := os.LookupEnv("ZULIP_API_KEY")
+	zulipApiKey, ok := os.LookupEnv("PROJECT_STREAM_BOT_ZULIP_API_KEY")
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
@@ -70,7 +70,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	zulipEmail, ok := os.LookupEnv("ZULIP_EMAIL")
+	zulipEmail, ok := os.LookupEnv("PROJECT_STREAM_BOT_ZULIP_EMAIL")
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
