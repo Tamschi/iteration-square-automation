@@ -94,7 +94,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	githubTc := oauth2.NewClient(ctx, githubTs)
 
 	githubClient := github.NewClient(githubTc)
-	release, res, err := githubClient.Repositories.GetReleaseByTag(ctx, "Tamschi", project, tag)
+	repository, res, err := githubClient.Repositories.Get(ctx, "Tamschi", project)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: res.StatusCode,
@@ -165,11 +165,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	query.Set("type", "stream")
 	query.Set("to", "["+fmt.Sprint(streamIdResponse.StreamId)+"]")
 	query.Set("topic", "tag announcements")
-	query.Set("content", `[`+*release.Author.Name+"(@"+*release.Author.Login+`)](`+*release.Author.HTMLURL+`) published a new release:
-
-	# [`+*release.Name+`](`+*release.HTMLURL+`)
-
-	`+*release.Body)
+	query.Set("content", `Tag pushed: [`+tag+`](https://github.com/Tamschi/`+*repository.Name+`/releases/tag/`+tag+`)`)
 	zulipUrl.RawQuery = query.Encode()
 
 	zulipRequest, err = http.NewRequestWithContext(ctx, http.MethodPost, zulipUrl.String(), nil)
