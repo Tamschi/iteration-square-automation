@@ -169,7 +169,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	zulipUrl.Path = "api/v1/get_stream_id"
 
 	query = url.Values{}
-	query.Set("stream", repositoryName)
+	query.Set("stream", "project/" + repositoryName)
 	zulipUrl.RawQuery = query.Encode()
 
 	zulipRequest, err = http.NewRequestWithContext(ctx, http.MethodGet, zulipUrl.String(), nil)
