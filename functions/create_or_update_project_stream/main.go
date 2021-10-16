@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -35,7 +36,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	repository_name := request.Body
+	repositoryName := request.Body
 	if request.Body == "" {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
@@ -85,26 +86,23 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	githubTc := oauth2.NewClient(ctx, githubTs)
 
 	githubClient := github.NewClient(githubTc)
-	repository, res, err := githubClient.Repositories.Get(ctx, "Tamschi", repository_name)
+	repository, res, err := githubClient.Repositories.Get(ctx, "Tamschi", repositoryName)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: res.StatusCode,
 			Body:       err.Error(),
 		}, nil
 	}
+
+	// Zulip authentication and shared setup:
+
+	zulipUrl.User = url.UserPassword(zulipEmail, zulipApiKey)
+	client := &http.Client{}
 
 	// Touch stream:
 	zulipUrl.Path = "api/v1/users/me/subscriptions"
 
-	zulipUrl.User = url.UserPassword(zulipEmail, zulipApiKey)
-
-	query, err := url.ParseQuery(zulipUrl.RawQuery)
-	if err != nil {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: res.StatusCode,
-			Body:       err.Error(),
-		}, nil
-	}
+	query := url.Values{}
 
 	type subscription struct {
 		Name        string `json:"name"`
@@ -133,8 +131,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	query.Set("announce", "true")
 	// query.Set("is_web_public", "true") // Not enabled for the free organisations available by default.
 	query.Set("history_public_to_subscribers", "true")
-	query.Set("stream_post_policy", "1")                 // Any user can post.
-	query.Set("message_retention_days", "\"realm_default\"") // Any user can post.
+	query.Set("stream_post_policy", "1") // Any user can post.
+	query.Set("message_retention_days", "\"realm_default\"")
 
 	zulipUrl.RawQuery = query.Encode()
 	zulipRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, zulipUrl.String(), nil)
@@ -145,7 +143,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	client := &http.Client{}
 	response, err := client.Do(zulipRequest)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
@@ -161,10 +158,114 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 			Body:       err.Error(),
 		}, nil
 	}
+	if 200 > response.StatusCode || response.StatusCode >= 300 {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: response.StatusCode,
+			Body:       zulipUrl.Redacted() + "\n\n" + string(responseBody),
+		}, nil
+	}
+
+	// Get stream ID:
+	zulipUrl.Path = "api/v1/get_stream_id"
+
+	query = url.Values{}
+	query.Set("stream", repositoryName)
+	zulipUrl.RawQuery = query.Encode()
+
+	zulipRequest, err = http.NewRequestWithContext(ctx, http.MethodGet, zulipUrl.String(), nil)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	response, err = client.Do(zulipRequest)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	responseBody, err = ioutil.ReadAll(response.Body)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+	if 200 > response.StatusCode || response.StatusCode >= 300 {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: response.StatusCode,
+			Body:       zulipUrl.Redacted() + "\n\n" + string(responseBody),
+		}, nil
+	}
+
+	type SteamIdResponse struct {
+		Msg      string `json:"msg"`
+		Result   string `json:"result"`
+		StreamId int    `json:"stream_id"`
+	}
+	var streamIdResponse SteamIdResponse
+	err = json.Unmarshal(responseBody, &streamIdResponse)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	// Update stream:
+	zulipUrl.Path = "api/v1/streams/" + fmt.Sprint(streamIdResponse.StreamId)
+
+	query = url.Values{}
+
+	description, err := json.Marshal(repository.Description)
+	query.Set("description", string(description))
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+	zulipUrl.RawQuery = query.Encode()
+
+	zulipRequest, err = http.NewRequestWithContext(ctx, http.MethodPatch, zulipUrl.String(), nil)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	response, err = client.Do(zulipRequest)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+
+	responseBody, err = ioutil.ReadAll(response.Body)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
+		}, nil
+	}
+	if 200 > response.StatusCode || response.StatusCode >= 300 {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: response.StatusCode,
+			Body:       zulipUrl.Redacted() + "\n\n" + string(responseBody),
+		}, nil
+	}
+
+	// ---
 
 	return &events.APIGatewayProxyResponse{
 		StatusCode: response.StatusCode,
-		Body:       "Request URL:\n" + zulipUrl.Redacted() + "\n\nResponse from Zulip:\n\n" + string(responseBody), // What. No validation?
+		Body:       "Created stream or updated stream description.",
 	}, nil
 }
 
