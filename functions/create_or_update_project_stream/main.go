@@ -169,7 +169,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	zulipUrl.Path = "api/v1/get_stream_id"
 
 	query = url.Values{}
-	query.Set("stream", "project/" + repositoryName)
+	query.Set("stream", "project/"+repositoryName)
 	zulipUrl.RawQuery = query.Encode()
 
 	zulipRequest, err = http.NewRequestWithContext(ctx, http.MethodGet, zulipUrl.String(), nil)
@@ -221,8 +221,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	query = url.Values{}
 
-	description, err := json.Marshal(repository.Description)
-	query.Set("description", string(description))
+	query.Set("description", *repository.Description)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
