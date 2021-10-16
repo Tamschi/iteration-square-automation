@@ -13,6 +13,8 @@ import (
 
 	"github.com/google/go-github/v39/github"
 
+	"github.com/reecerussell/aws-lambda-multipart-parser/parser"
+
 	"golang.org/x/oauth2"
 )
 
@@ -35,19 +37,27 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 		}, nil
 	}
 
-	project, ok := request.QueryStringParameters["project"]
-	if !ok || project == "" {
+	data, err := parser.Parse(request)
+	if err != nil {
 		return &events.APIGatewayProxyResponse{
-			StatusCode: http.StatusBadRequest,
-			Body:       "Query string parameter `project` missing or empty.",
+			StatusCode: http.StatusInternalServerError,
+			Body:       err.Error(),
 		}, nil
 	}
 
-	tag, ok := request.QueryStringParameters["tag"]
+	project, ok := data.Get("project")
+	if !ok || project == "" {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body:       "Multipart-form parameter `project` missing or empty.",
+		}, nil
+	}
+
+	tag, ok := data.Get("tag")
 	if !ok || tag == "" {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Body:       "Query string parameter `tag` missing or empty.",
+			Body:       "Multipart-form parameter `tag` missing or empty.",
 		}, nil
 	}
 
