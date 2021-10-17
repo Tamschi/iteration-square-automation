@@ -200,6 +200,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	return &events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
+		Headers:    map[string]string{"Content-Type": "application/json"},
 		Body:       string(badge),
 	}, nil
 }
