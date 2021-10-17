@@ -57,7 +57,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-			Body:       "`ZULIP_API_KEY` not set.",
+			Body:       "`TAG_ANNOUNCEMENT_BOT_ZULIP_API_KEY` not set.",
 		}, nil
 	}
 

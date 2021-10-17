@@ -50,7 +50,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-			Body:       "`ZULIP_API_KEY` not set.",
+			Body:       "`PROJECT_STREAM_BOT_ZULIP_API_KEY` not set.",
 		}, nil
 	}
 
@@ -74,7 +74,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 	if !ok {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-			Body:       "`ZULIP_EMAIL` not set.",
+			Body:       "`PROJECT_STREAM_BOT_ZULIP_EMAIL` not set.",
 		}, nil
 	}
 
